@@ -1,0 +1,405 @@
+
+
+Cutting Labeling Costs in Imbalanced Seafood Datasets: An Active Learning Approach with ResNet-18
+
+Abstract
+The scarcity of fully labeled datasets remains a primary bottleneck in supervised deep learning for marine computer vision applications. This project investigates the use of Active Learning, specifically uncertainty sampling via the Least Confidence metric, to minimize manual labeling costs in an artificially imbalanced seafood classification dataset. Utilizing a ResNet-18 architecture, the model was trained on a modified version of “A Large Scale Fish Dataset,” which was throttled to simulate a severe long-tailed distribution. The proposed Active Learning pipeline appears to have queried the most ambiguous unlabeled samples to expand a tightly curated initial training pool. Experimental results indicate that Uncertainty Sampling outperforms the Random Sampling baseline. The Active Learning model achieved a Test Macro F1 score of 0.8107 using only 2.70% of the total available data, which equates to an approximate 97.3% reduction in required labeling efforts. Furthermore, unsupervised t-SNE feature visualizations demonstrate that Active Learning forces earlier and cleaner separation of class clusters by targeting decision boundaries. These findings highlight Active Learning as a highly sample-efficient strategy that implicitly balances minority classes in skewed data distributions.
+I.Introduction
+Automatic seafood classification is rapidly growing because it replaces the slow, subjective, and error-prone process of manual labelling. By automating classification using AI systems, agencies can better monitor biodiversity, stop illegal fishing, and streamline industrial sorting [1]. Using computer vision, deep learning, and architectures such as Convolutional Neural Networks (CNNs), researchers and processing facilities can analyze large volumes of marine data in real time. Readily available datasets, like “A Large Scale Fish Dataset” from Kaggle, can help in training computer vision and deep learning models for multi-class fish species classification.
+
+The Problem
+The question now is what if there is an abundance of data, but no significant labels are associated with them? The lack of high-quality labeled data is the primary bottleneck in supervised deep learning. While modern neural networks are exceptionally powerful, their performance depends entirely on the data used to train them. Deep learning models require vast datasets to generalize well, but large datasets entail significant manual labor for human annotation; not to mention, manual labeling introduces noise, inconsistencies, and mistakes into the ground truth dataset.
+
+The Solution
+To bypass the bottleneck, AI practitioners rely on alternative learning paradigms and data augmentation techniques. One of these strategies that seem promising is Active Learning, where algorithms automatically identify and select the most ambiguous data points for human review, reducing overall labeling volume [2].
+
+A general framework for Active Learning is shown in Figure 1 [3]. The process begins by training the model on a small subset of labeled data. The model then scans the larger unlabeled dataset to identify the most informative examples based on a predefined query strategy. A domain expert, also called the oracle or annotator, manually labels these selected data points before adding them to the training set. The system then retrains the model iteratively to improve performance. This cycle continues until the model reaches satisfactory accuracy or the training budget is exhausted. The main idea is that a model can achieve satisfactory performance with fewer labels if it is allowed to choose the data it learns from.
+
+
+
+Figure 1. A general framework for Active Learning
+In this paper, the query strategy will be uncertainty sampling (least confidence), which is hypothesized to outperform random sampling. Metrics are measured, including Macro F1 score, on a heavily imbalanced training pool.
+II.Methods
+
+Dataset and Preprocessing
+“A Large Scale Fish Dataset” is one of the most popular and publicly available image classification and segmentation datasets on Kaggle [4]. It was originally created for university-industry seafood quality research in Turkey and contains 9000 colored (RGB) images of nine different and widely consumed fish and seafood types. The nine classes present in the dataset are Red Sea Bream, Gilt-Head Bream, Sea Bass, Red Mullet, Striped Red Mullet, Horse Mackerel, Black Sea Sprat, Trout, and Shrimp; with each having exactly 1000 images. Sample images are presented in Figure 2.
+
+
+
+Figure 2. Sample images per class of A Large Scale Fish Dataset
+For the preprocessing, the available images in every single class is shuffled and sliced off at exact amounts for three splits: 200 images for the test set, 100 images for the validation set, and 10 images for the initial labeled train set. Because exact numbers are taken for every class, the three splits are perfectly balanced. This is to mimic a real-world Active Learning scenario where an annotator manually labeled a small dataset to evaluate a model and perform initial training.
+Whatever is left over after the first 310 images are sliced off will form the unlabeled pool. To mimic a class imbalance scenario, the number of images per class is scaled using the following constants listed in Table 1.
+
+Class
+
+Throttling Constant
+Black Sea Sprat
+1.0
+Gilt-Head Bream
+0.6
+Horse Mackerel
+0.3
+Red Mullet
+0.15
+Red Sea Bream
+0.1
+Sea Bass
+0.05
+Shrimp
+0.05
+Striped Red Mullet
+0.02
+Trout
+0.02
+
+Table 1. Constants used to introduce class imbalance across the train set
+The throttling of the images per class in the unlabeled pool is supposed to simulate a long-tailed distribution. In reality, fish data will vary depending on the species where some are common and some are not. This way, the model will be forced to learn from a heavily imbalanced dataset. A visualization of the number of images per class per split can be seen in Figure 3.
+
+
+Figure 3. Number of images per class per split, showing that the unlabeled train pool exhibits simulated class imbalance
+
+Model Architecture
+ResNet-18 is a popular 18-layer deep convolutional neural network (CNN) primarily used for image classification and computer vision [5] [6]. It is highly favored because it is lightweight and easy to train while having accurate results. Using ResNet-18 for fish classification within an Active Learning loop is highly strategic because it perfectly balances computational speed, feature extraction quality, and sample efficiency. ResNet-18’s lightweight architecture would benefit Active Learning since it requires the model to scan thousands of unlabeled images in every loop to choose which ones to label next. Appropriate to the dataset, the output of ResNet-18 has been modified to output 9 classes.
+
+Active Learning Strategy
+To evaluate the effectiveness of Active Learning for fish classification, the model is trained starting with a tightly curated initial training pool. This foundational dataset consists of exactly 90 labeled images, balanced at 10 images for each of the 9 fish classes. During the Active Learning cycles, Least Confidence metric is used as core acquisition function. This uncertainty-based strategy evaluates the unlabeled data pool by analyzing the model’s softmax outputs. Specifically, the images are selected where the model’s highest predicted class probability is the lowest. By prioritizing the samples that maximize
+
+$$1 - P(\hat{y}|x),$$
+the strategy targets the exact images the model is most confused about. This is to ensure human annotation efforts are spent only on the most informative data.
+To iteratively improve the model, a strict query budget of 10 samples per iteration is set across 10 total iterations. This choice of 10 samples is deliberate to establish having a lazy annotator. The training set is ultimately expanded by 100 precisely chosen images. Finally, to rigorously validate the performance gains of this uncertainty sampling, Random Sampling is utilized as the baseline control group. This is to ensure that any observed improvements in the ResNet-18’s performance are driven by the selection strategy.
+
+Experimental Setup
+Hyperparameter Configuration. The network was optimized using the Adam (Adaptive Moment Estimation) optimizer with the default learning rate 0.001, selected for its efficient handling of sparse gradients and adaptive learning rate capabilities [7]. The model was trained to minimize the standard Cross-Entropy Loss, which is the optimal objective function for multi-class classification tasks as it heavily penalizes confident but incorrect predictions. To facilitate smooth convergence as the model approached local minima, StepLR learning rate scheduler is used. This scheduler systematically decayed the learning rate by the default predefined factor $\gamma = 0.1$ after the set number of epochs step\_size \= 7. This is supposed to allow the model to make fine-grained weight adjustments during the later stages of training.
+Early Stopping Mechanics. Neural networks are highly prone to overfitting especially when trained on the exceptionally small data budgets during the initial stages of Active Learning. It follows then to implement an early stopping mechanism. During training, the model’s performance was continuously evaluated on the held-out validation set at the end of each epoch. If the validation loss failed to decrease for a consecutive number of epochs $patience = 5$, training was prematurely halted. The pipeline then automatically restored the model weights from the epoch that achieved the lowest validation loss. This ensured that the final model evaluated on the test set was optimally generalized and not overfitted to the training pool.
+Stochastic Noise and Reproducibility: Initial training tests suggest that the model is subject to inherent randomness arising from random weight initialization and data shuffling. With 10 samples queried per iteration, the randomness can lead to high variance and noisy performance trajectories. To account for this noise and ensure the statistical validity of findings, experiments were executed independently across three distinct random seeds: 5, 42, and 101. The learning curves and quantitative metrics reported in this project represent the arithmetic mean of the three runs, complete with standard deviation margins to reliably demonstrate the true underlying performance trends of uncertainty sampling versus the random baseline.
+
+III.Results
+
+Supervised Learning Baseline (Upper Bound)
+To establish a theoretical upper bound for model performance, a ResNet-18 model was trained on the entire 70% training pool (comprising $700 \times 9 = 6300$ images) using standard supervised learning, with the number of epochs being 30, and an early stopping mechanism of $patience = 5$. Under these conditions, the model achieved an exemplary test accuracy of 1.0000 and a test Macro F1 score of 1.0000 as well. These metrics serve as the target ceiling for our Active Learning experiments, representing the maximum achievable performance when labeling costs are not a constraint and the ideal scenario when all the available data points are labeled. Figure 4 presents the corresponding confusion matrix for the supervised baseline.
+
+
+
+Figure 4. Baseline ResNet-18 confusion matrix for the supervised learning
+
+Quantitative Performance: Active Learning vs. Random Baseline
+The performance of uncertainty sampling (Active Learning) is evaluated against a random sampling baseline over 10 acquisition iterations. To ensure statistical validity and mitigate noise, all reported metrics represent the arithmetic mean across the three independent random seeds, with shaded regions indicating the standard deviation.
+As illustrated in Figure 5, both strategies exhibited an almost comparable performance as the labeled pool grew from the initial 90 samples to 190 samples. Active Learning, however, demonstrated an upward learning trajectory. By Iteration 8, Active Learning achieved a mean Test Macro F1 score of 0.8107 (± 0.0127), whereas the Random Baseline only reached 0.7371 (± 0.0284).
+
+
+
+Figure 4. Learning curves between Active Learning and Random Sampling
+The standard deviation margins reveal that while Random Sampling exhibited high variance and instability (notably dipping at Iteration 1 and 9), Uncertainty Sampling remained robust. The separation between the confidence intervals from Iteration 8 onward suggests that the performance gain yielded by Active Learning is evident.
+
+
+
+Figure 5. Confusion matrices for seed = 101 and iteration = 7 of Active Learning and Random Sampling
+It can also be observed that at Iteration 7 (160 labeled samples), there is a wide range based on the deviation. Figure 5 presents the confusion matrices for a specific seed (101) at this iteration, and it can be observed that the model developed by Active Learning is confused mostly with the Red Sea Bream being erroneously classified as a Gilt-Head Bream. Meanwhile, Random Sampling appears to be mostly incorrect in classifying Striped Red Mullet as Shrimp.
+
+Performance at Key Data Budgets
+The advantage of Active Learning becomes highly apparent when analyzing performance at strict labeling budgets. Table 2 details the comparative metrics at specific data utilization thresholds.
+
+
+
+
+
+Active Learning
+
+
+
+
+
+Random Sampling
+
+
+
+
+
+
+
+Iteration
+
+Val_Acc
+
+Val_F1
+
+Test_Acc
+
+Test_F1
+
+Val_Acc
+
+Val_F1
+
+Test_Acc
+
+Test_F1
+
+1.43%
+
+0
+
+0.7448
+
+0.7385
+
+0.7480
+
+0.7437
+
+0.7400
+
+0.7371
+
+0.7363
+
+0.7353
+
+1.59%
+
+1
+
+0.7363
+
+0.7344
+
+0.7409
+
+0.7394
+
+0.6581
+
+0.6554
+
+0.6535
+
+0.6517
+
+1.75%
+
+2
+
+0.7611
+
+0.7584
+
+0.7554
+
+0.7546
+
+0.7293
+
+0.7252
+
+0.7150
+
+0.7119
+
+1.90%
+
+3
+
+0.7496
+
+0.7478
+
+0.7396
+
+0.7370
+
+0.7593
+
+0.7546
+
+0.7502
+
+0.7469
+
+2.06%
+
+4
+
+0.7581
+
+0.7515
+
+0.7450
+
+0.7414
+
+0.7333
+
+0.7289
+
+0.7206
+
+0.7177
+
+2.22%
+
+5
+
+0.7685
+
+0.7650
+
+0.7615
+
+0.7579
+
+0.7552
+
+0.7514
+
+0.7337
+
+0.7307
+
+2.38%
+
+6
+
+0.7859
+
+0.7833
+
+0.7900
+
+0.7865
+
+0.7278
+
+0.7225
+
+0.7193
+
+0.7163
+
+2.54%
+
+7
+
+0.7781
+
+0.7687
+
+0.7711
+
+0.7595
+
+0.7233
+
+0.7110
+
+0.7109
+
+0.7012
+
+2.70%
+
+8
+
+0.8281
+
+0.8261
+
+0.8126
+
+0.8107
+
+0.7496
+
+0.7384
+
+0.7450
+
+0.7371
+
+2.86%
+
+9
+
+0.8137
+
+0.8093
+
+0.8046
+
+0.8020
+
+0.7026
+
+0.6933
+
+0.6941
+
+0.6840
+
+3.02%
+
+10
+
+0.7989
+
+0.7918
+
+0.7931
+
+0.7865
+
+0.7574
+
+0.7563
+
+0.7344
+
+0.7334
+
+Table 2. Comparison of Active Learning and Random Sampling metrics
+At a data budget of only 2.38% (Iteration 6, 150 labeled samples), Uncertainty Sampling outperformed Random Sampling by a margin of 0.0707 in Test Accuracy and 0.0702 in Test Macro F1. Notably, the Active Learning model reached a Macro F1 score of 0.8107 using only 2.70% of the total available data. This demonstrates that Active Learning reduced the requisite labeling cost by about 97.3% to achieve over four-fifths of the supervised baseline model performance that saw all 6300 images.
+
+Unsupervised Feature Analysis (t-SNE)
+To qualitatively understand the acquisition behavior, the 512-dimensional feature embeddings were extracted from the penultimate layer of the models at Iterations 0, 5, and 10, and projected them into a 2D space using t-SNE (Figures 6, 7, and 8).
+
+
+Figure 6. tSNE plot for Iteration 0 of Active Learning and Random Sampling
+
+
+
+Figure 7. tSNE plot for Iteration 5 of Active Learning and Random Sampling
+
+
+
+Figure 8. tSNE plot for Iteration 10 of Active Learning and Random Sampling
+At Iteration 0 (budget: 1.43%), the feature space for both models was highly entangled Distinct seafood classes overlap significantly near the center of the projection. By Iteration 5, the model trained via Active Learning demonstrated noticeably tighter and more heavily separated class clusters compared to the Random Baseline.
+Furthermore, highlighting the top 30 queried samples per iteration visually confirms the algorithmic divergence between the two strategies. The Random Sampling queries (indicated by yellow stars) were uniformly distributed throughout the feature space, frequently sampling redundant data points deep within already established class clusters.
+Conversely, Uncertainty Sampling systematically targeted the boundary regions between overlapping clusters. The left plot in Figure 6, for example, shows selected points are concentrated between the boundaries of Shrimp (pink) and Striped Red Mullet (gray). The overlapping points that correspond to Trout (apple green), Red Sea Bream (purple), and Gilt-Head Bream (orange), appear to also have been sampled heavily by the algorithm. The confusion matrix in Figure 5 is consistent with this observation, where Red Sea Bream is confused with the Gilt-Head Bream. Figure 7 (left side) then presents a significant separation between the same clusters, albeit there are still points mixed up within the Shrimp (pink) cluster.
+Interestingly, points that correspond to the Trout, Red Sea Bream, and Gilt-Head Bream appear to have separated better, especially when compared with those within the plot for Random Sampling. By explicitly querying the most ambiguous or low-confidence images, the Active Learning model appears to disentangle the feature space and refine its decision boundaries with far greater sample efficiency.
+IV.Discussion
+The experimental results support the idea that Uncertainty Sampling provides an advantage over Random Sampling, particularly in heavily imbalanced environments. While Random Sampling eventually achieved a comparable overall Test Accuracy by the later iterations, the Test Macro F1 scores revealed a divergence in model capability.
+Because the unlabeled training pool was throttled into a severely imblanced distribution, the Random Sampling strategy inherently fell victim to the base rates of the data. It redundantly sampled the majority seafood classes while effectively ignoring the rare minority classes. This could explain its stagnant, if not degraded, Macro F1 score. Conversely, the Uncertainty Sampling strategy (utilizing the Least Confidence metric) appears to have acted as an implicit class-balancing mechanism. Because the ResNet-18 model naturally exhibited lower confidence when presented with underrepresented classes, the acquisition function disproportionately targeted these rare images. By aggressively querying the minority classes, Active Learning achieved a relatively higher generalization across all 9 classes at a fraction of the data budget required by the baseline.
+
+Disentanglement in the t-SNE Feature Space
+The quantitative advantages of Active Learning are visually supported by the unsupervised t-SNE feature analysis. The t-SNE projections demonstrate how Uncertainty Sampling optimizes the model’s learned representations.
+As observed in the Random Sampling visualizations, querying data points uniformly and randomly results in the selection of images that reside within class clusters with high density. These queries essentially provide little to no new information to the model, since the idea is that the network is already highly confident in those regions. In contrast, the Uncertainty Sampling queries appear to be predominantly localized along the chaotic boundaries between overlapping clusters.
+By systematically querying the most ambiguous images (those residing on the very edge of the model’s current decision boundaries) Active Learning likely forced the network to disentangle visually similar fish classes. This targeted refinement could explain why the Active Learning feature space achieved more distinct cluster separation much earlier in the training lifecycle than the random baseline.
+
+Some Limitations
+While the results are compelling especially during later iterations, this project has several limitations that must be acknowledged. First, the query batch size was restricted to 10 samples per iteration. In real-world and large-scale annotation pipelines, querying in such small batches is often computationally inefficient due to the overhead of frequently retraining the model.
+Another limitation would be the use of Least Confidence as the sole acquisition function. Least Confidence only considers the highest class probability and ignores the rest of the probability distribution. It is possible that the model queried images it was equally confused about across all 9 classes. Exploring another querying function that leverages that valuable information is desired.
+The class imbalance in the training pool was also artificially synthesized. Real-world long-tailed datasets often contain additional complexities, such as samples that have noisy labels. These were not simulated in this controlled experiment.
+
+Future Work
+Future work should explore more sophisticated acquisition functions. For instance, comparing Least Confidence against other sampling strategies could yield even higher sample efficiency. Additionally, because Uncertainty Sampling in larger batches can sometimes select multiple nearly identical boundary images, future experiments could incorporate diversity-aware algorithms. Changing the model (that is, replacing ResNet-18) would also be an interesting pathway.
+V.Conclusion
+This project demonstrates that Active Learning is a strategy for mitigating the expensive and subjective process of manual data annotation in automated seafood classification. Using a Least Confidence uncertainty sampling strategy alongside a lightweight ResNet-18 model, the system navigated an imbalanced training pool to achieve comparative generalization.
+
+
+References
+[1] M. Bhanumathi and B. Arthi, "Future Trends and Short-Review on Fish Species Classification Models Based on Deep Learning Approaches," 2022 International Conference on Augmented Intelligence and Sustainable Systems (ICAISS), Trichy, India, 2022, pp. 01-05, doi: 10.1109/ICAISS55157.2022.10011087.
+[2] L. Sun and Y. Gong, "Active Learning for Image Classification: A Deep Reinforcement Learning Approach," 2019 2nd China Symposium on Cognitive Computing and Hybrid Intelligence (CCHI), Xi'an, China, 2019, pp. 71-76, doi: 10.1109/CCHI.2019.8901911.
+[3] Margaux Masson-Forsythe, Active Machine Learning with Python: Refine and elevate data quality over quantity with active learning , Packt Publishing, 2024.
+[4] O. Ulucan, D. Karakaya and M. Turkan, "A Large-Scale Dataset for Fish Segmentation and Classification," 2020 Innovations in Intelligent Systems and Applications Conference (ASYU), Istanbul, Turkey, 2020, pp. 1-5, doi: 10.1109/ASYU50717.2020.9259867.
+[5] K. He, X. Zhang, S. Ren and J. Sun, "Deep Residual Learning for Image Recognition," 2016 IEEE Conference on Computer Vision and Pattern Recognition (CVPR), Las Vegas, NV, USA, 2016, pp. 770-778, doi: 10.1109/CVPR.2016.90.
+[6] J. Kaur, S. Rani, A. Sharma and A. Dogra, "WingSpan: Advanced Butterfly Classification using ResNet-18 Networks," 2024 3rd International Conference on Automation, Computing and Renewable Systems (ICACRS), Pudukkottai, India, 2024, pp. 827-832, doi: 10.1109/ICACRS62842.2024.10841798.
+[7] S. Y. ŞEN and N. ÖZKURT, "Convolutional Neural Network Hyperparameter Tuning with Adam Optimizer for ECG Classification," 2020 Innovations in Intelligent Systems and Applications Conference (ASYU), Istanbul, Turkey, 2020, pp. 1-6, doi: 10.1109/ASYU50717.2020.9259896.

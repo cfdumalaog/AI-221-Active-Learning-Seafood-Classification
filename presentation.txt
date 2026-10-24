@@ -1,0 +1,204 @@
+Cutting Labeling Costs in an Imbalanced
+Seafood Dataset: An Active Learning
+Approach with ResNet-18
+
+Dumalaog, Crizepvill F.
+Jarical, Francis Neil SJ.
+Final Project for AI 221
+Introduction                                                                                Solution: Active Learning
+
+Automatic seafood classification is interesting                                             · In active learning, algorithms automatically identify and select the
+because it replaces the slow, subjective, and error-                                           most ambiguous data points for human review, which reduces
+prone process of manual labelling.                                                             overall labeling volume.
+· By automating classification using AI systems,
+                                                                                            · In this paper, the query strategy will be uncertainty sampling,
+   agencies can better monitor biodiversity, stop                                              which is hypothesized to outperform random sampling.
+   illegal fishing, and streamline industrial sorting.
+                                                                                            oracle                       annotation  labeled           General framework for
+Problem: Costly Labeled Data                                                                                                         dataset          active learning
+                                                                                            query                                           training  The process begins by
+· Deep learning models require vast datasets to                                                strategy                              model            training the model on a small
+   generalize well; but, large datasets entail                                                                                                        subset of labeled data. The
+   significant manual labor for human annotation.                                           unlabeled                    inference                    model then scans the
+                                                                                             dataset                                                  unlabeled dataset for the
+                                                                      Seafood Frustration                                                             most informative points
+                                                     Manual seafood annotation is costly                                                              based on a query strategy. A
+                                                    because it requires highly specialized                                                            domain expert, or oracle,
+                                              marine biologists to review and label vast                                                              manually labels these
+                                                    datasets. This makes fully supervised                                                             selected data points before
+                                                    training of computer vision models a                                                              adding them to the training
+                                                 massive logistical and financial burden.                                                             set. The system then retrains
+                                                                                                                                                      the model iteratively to
+                                                                                                                                                      improve performance. This
+                                                                                                                                                      cycle continues until the
+                                                                                                                                                      model reaches satisfactory
+                                                                                                                                                      accuracy.
+
+Cutting Labeling Costs in an Imbalanced Seafood Dataset: An Active Learning Approach with ResNet-18 - Dumalaog, Jarical                                                              2
+Methodology                                                                                                                                      Test / Valid / Train Splits
+
+Dataset and Preprocessing                                                                                                                        test set: 200 imgs
+
+· "A Large Scale Fish Dataset" is one of the most popular and publicly available image                                                           valid. set: 100 imgs
+   classification and segmentation datasets on Kaggle. It has 9 classes, each with 1000 images.
+                                                                                                                                                 initial labeled train set:
+                                                                                                    Sample images                                10 imgs
+                                                                                                   These are just sample frames from each of
+                                                                                                   the classes of "A Large Scale Fish Dataset".  initial unlabeled train set:
+                                                                                                                                                 690 imgs
+
+ Simulated imbalanced dataset
+The throttling of the images per class in the unlabeled pool is supposed to simulate a long-tailed
+distribution. In reality, fish data will vary depending on the species where some are common and some are
+not. This way, the model will be forced to learn from a heavily imbalanced dataset.
+
+Cutting Labeling Costs in an Imbalanced Seafood Dataset: An Active Learning Approach with ResNet-18 - Dumalaog, Jarical                                                        3
+ Methodology                                                                                                             ResNet-18
+
+  Model Architecture                                                                                                     · ResNet-18 is a
+                                                                                                                            lightweight, 18-
+  · Using ResNet-18 for classification within an Active Learning loop is                                                    layer
+     highly strategic because it perfectly balances computational speed,                                                    convolutional
+     feature extraction quality, and sample efficiency.                                                                     neural network
+                                                                                                                            (CNN) primarily
+  Active Learning Strategy                                                                                                  used for image
+                                                                                                                            classification.
+  · To iteratively improve the model, a strict query budget of 10
+     samples per iteration is set across 10 total iterations.                                                            · It features "skip
+                                                                                                                            connections"
+  · The training set is ultimately expanded by 100 chosen images.                                                           that allow
+                                                                                                                            gradients to flow
+  Experimental Setup                                                                                                        easily through
+                                                                                                                            the network.
+  · To rigorously validate the performance of uncertainty sampling,
+     Random Sampling is utilized as the baseline control group.                                                          · Skip connections     ReNet-18 Architecture
+                                                                                                                            prevent the        ResNet-18 is constructed primarily using
+  · The network was trained using the Adam, Cross-Entropy loss, and                                                         vanishing          Basic Residual Blocks. Source:
+     StepLR. Early stopping is also employed.                                                                               gradient           https://www.researchgate.net/figure/Fig
+                                                                                                                            problem and        -2-An-illustration-of-the-architecture-of-
+  · To account for noise and ensure the statistical validity of findings,                                                   enables efficient  ResNet-18-model_fig1_383708698
+     experiments were executed across 3 random seeds: 5, 42, and 101.                                                       training of
+                                                                                                                            deeper models.
+Cutting Labeling Costs in an Imbalanced Seafood Dataset: An Active Learning Approach with ResNet-18 - Dumalaog, Jarical
+                                                                                                                                                                                           4
+Results
+
+Supervised Learning Baseline
+
+· To establish a theoretical upper
+   bound for model performance, a
+   ResNet-18 model was trained on the
+   entire 70% training pool (comprising
+   700 × 9 = 6300 images).
+
+· The model achieved an exemplary
+   test accuracy of 1.0000 and a test
+   Macro F1 score of 1.0000 as well.
+
+Test Accuracy: 1.0000
+Test Macro Precision: 1.0000
+Test Macro Recall: 1.0000
+Test Macro F1-Score: 1.0000
+
+ Confusion matrix
+Baseline ResNet-18 confusion matrix for the supervised learning
+
+Cutting Labeling Costs in an Imbalanced Seafood Dataset: An Active Learning Approach with ResNet-18 - Dumalaog, Jarical  5
+Results
+
+Active Learning vs. Random Sampling
+
+· Both strategies exhibited a comparable performance as the labeled pool grew from the initial 90 samples to 190 samples.
+
+· Active Learning demonstrated an upward learning trajectory.
+
+· By Iteration 8, Active Learning achieved a mean Test Macro F1 score of 0.8107 (± 0.0127), whereas the Random Baseline
+   only reached 0.7371 (± 0.0284).
+
+                                                                                                                                                                                                           Learning curves
+                                                                                                                                                                                                          As iterations progress,
+                                                                                                                                                                                                          the accuracy and F1-
+                                                                                                                                                                                                          score of Active Learning
+                                                                                                                                                                                                          suggests an upward
+                                                                                                                                                                                                          trend.
+
+Cutting Labeling Costs in an Imbalanced Seafood Dataset: An Active Learning Approach with ResNet-18 - Dumalaog, Jarical                                                                                                             6
+Results
+
+Active Learning vs. Random Sampling
+
+· The model developed by Active Learning is confused mostly with the Red Sea Bream being erroneously classified as a Gilt-
+   Head Bream. Meanwhile, Random Sampling appears to be mostly incorrect in classifying Striped Red Mullet as Shrimp.
+
+Cutting Labeling Costs in an Imbalanced Seafood Dataset: An Active Learning Approach with ResNet-18 - Dumalaog, Jarical     7
+Results
+
+Active Learning vs. Random Sampling
+
+                                     Active Learning                                                                     Random Sampling
+
+Budget Iteration Val_Acc Val_F1 Test_Acc Test_F1 Val_Acc Val_F1 Test_Acc Test_F1
+
+1.43%  0   0.7448 0.7385 0.7480 0.7437                                                                                   0.7400 0.7371 0.7363 0.7353
+
+1.59%  1   0.7363 0.7344 0.7409 0.7394                                                                                   0.6581 0.6554 0.6535 0.6517
+
+1.75%  2   0.7611 0.7584 0.7554 0.7546                                                                                   0.7293 0.7252 0.7150 0.7119
+
+1.90%  3   0.7496 0.7478 0.7396 0.7370                                                                                   0.7593 0.7546 0.7502 0.7469
+
+2.06%  4   0.7581 0.7515 0.7450 0.7414                                                                                   0.7333 0.7289 0.7206 0.7177
+
+2.22%  5   0.7685 0.7650 0.7615 0.7579                                                                                   0.7552 0.7514 0.7337 0.7307
+
+2.38%  6   0.7859 0.7833 0.7900 0.7865                                                                                   0.7278 0.7225 0.7193 0.7163
+
+2.54%  7   0.7781 0.7687 0.7711 0.7595                                                                                   0.7233 0.7110 0.7109 0.7012
+
+2.70%  8   0.8281 0.8261 0.8126 0.8107                                                                                   0.7496 0.7384 0.7450 0.7371
+
+2.86%  9   0.8137 0.8093 0.8046 0.8020                                                                                   0.7026 0.6933 0.6941 0.6840
+
+3.02%  10  0.7989 0.7918 0.7931 0.7865                                                                                   0.7574 0.7563 0.7344 0.7334
+
+Cutting Labeling Costs in an Imbalanced Seafood Dataset: An Active Learning Approach with ResNet-18 - Dumalaog, Jarical                               8
+Results
+
+Unsupervised Feature Analysis
+
+· By explicitly querying the most ambiguous or low-
+   confidence images, the Active Learning model appears
+   to disentangle the feature space and refine its decision
+   boundaries with far greater sample efficiency.
+
+Cutting Labeling Costs in an Imbalanced Seafood Dataset: An Active Learning Approach with ResNet-18 - Dumalaog, Jarical  9
+Wrapping Up
+
+Limitations                      Summary and Conclusion
+
+· Query batch size was           · This project demonstrates that Active Learning is a strategy for mitigating the expensive
+   restricted to 10 samples per     and subjective process of manual data annotation in automated seafood classification.
+   iteration.
+                                  Problem and Approach           Methodology                                                     Key Results
+· Least Confidence only
+   considers the highest-class   · The project            · Uncertainty sampling                                         · The Active Learning
+   probability and ignores the     investigated using an    was used via the Least                                         model outperformed
+   rest of the probability         Active Learning          Confidence metric to                                           the random sampling
+   distribution.                   framework with a         systematically query                                           baseline, achieving a
+                                   ResNet-18                and select the most                                            Test Macro F1 score of
+· Synthetic class imbalance of     convolutional neural     ambiguous unlabeled                                            0.8107 using only
+   the training pool.              network to reduce the    images for human                                               2.70% of the available
+                                   significant manual       annotation, which                                              data, which translates
+Future Work                        labeling costs           appears to implicitly                                          to an approximate
+                                   associated with          helped balance                                                 97.3% reduction in
+· Explore more sophisticated       heavily imbalanced       minority classes.                                              required labeling
+   acquisition functions.          marine computer                                                                         efforts.
+                                   vision datasets.
+· Incorporate diversity-aware
+   algorithms.
+
+· Explore other models
+   besides ResNet-18.
+
+Cutting Labeling Costs in an Imbalanced Seafood Dataset: An Active Learning Approach with ResNet-18 - Dumalaog, Jarical                            10
+
